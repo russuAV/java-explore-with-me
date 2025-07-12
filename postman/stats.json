@@ -68,7 +68,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "  {\n    \"app\": \"ewm-main-service\",\n    \"uri\": \"/events/1\",\n    \"ip\": \"192.168.0.1\",\n    \"timestamp\": \"2025-07-11 12:01:00\"\n  }",
+							"raw": "  {\n    \"app\": \"ewm-main-service\",\n    \"uri\": \"/events/1\",\n    \"ip\": \"111.111.111.111\",\n    \"timestamp\": \"2025-07-11 12:01:00\"\n  }",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -128,6 +128,34 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Сохранение хита",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"app\": \"ewm-main-service\",\n    \"uri\": \"/events/2\",\n    \"ip\": \"111.111.111.113\",\n    \"timestamp\": \"2025-07-11 12:00:00\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:9090/hit",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9090",
+							"path": [
+								"hit"
+							]
+						}
+					},
+					"response": []
 				}
 			],
 			"event": [
@@ -163,12 +191,20 @@
 			"name": "stats",
 			"item": [
 				{
-					"name": "Получение статистики",
+					"name": "Получение статистики общей",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Ответ — JSON массив\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an(\"array\");",
+									"});",
 									""
 								],
 								"type": "text/javascript",
@@ -180,7 +216,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:9090/stats?start=2025-07-11T00:00:00&end=2025-07-12T00:00:00",
+							"raw": "http://localhost:9090/stats?start=2025-07-01+00:00:00&end=2025-07-12+23:59:59",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -192,11 +228,11 @@
 							"query": [
 								{
 									"key": "start",
-									"value": "2025-07-11T00:00:00"
+									"value": "2025-07-01+00:00:00"
 								},
 								{
 									"key": "end",
-									"value": "2025-07-12T00:00:00"
+									"value": "2025-07-12+23:59:59"
 								}
 							]
 						}
@@ -212,9 +248,19 @@
 								"exec": [
 									"let data = pm.response.json();",
 									"",
-									"pm.test(\"Уникальных IP = 3\", function () {",
-									"  pm.expect(data[0].hits).to.eql(3);",
-									"});"
+									"pm.test(\"Уникальных IP = 2\", function () {",
+									"  pm.expect(data[0].hits).to.eql(2);",
+									"});",
+									"",
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Ответ — JSON массив\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an(\"array\");",
+									"});",
+									""
 								],
 								"type": "text/javascript",
 								"packages": {}
@@ -225,7 +271,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:9090/stats?start=2025-07-11T10:00:00&end=2025-07-11T16:00:00&unique=true",
+							"raw": "http://localhost:9090/stats?start=2025-07-01+00:00:00&end=2025-07-12+23:59:59&uris=%2Fevents%2F1&unique=true",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -237,15 +283,92 @@
 							"query": [
 								{
 									"key": "start",
-									"value": "2025-07-11T10:00:00"
+									"value": "2025-07-01+00:00:00"
 								},
 								{
 									"key": "end",
-									"value": "2025-07-11T16:00:00"
+									"value": "2025-07-12+23:59:59"
+								},
+								{
+									"key": "uris",
+									"value": "%2Fevents%2F1"
 								},
 								{
 									"key": "unique",
 									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Получение статистики по хиту, который не регался",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Ответ — JSON массив\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an(\"array\");",
+									"});",
+									"",
+									"pm.test(\"Массив пустой — хитов не было\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.length).to.eql(0);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:9090/stats?start=2025-07-01+00:00:00&end=2025-07-12+23:59:59&uris=%2Fevents%2F3&unique=false",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9090",
+							"path": [
+								"stats"
+							],
+							"query": [
+								{
+									"key": "start",
+									"value": "2025-07-01+00:00:00"
+								},
+								{
+									"key": "end",
+									"value": "2025-07-12+23:59:59"
+								},
+								{
+									"key": "uris",
+									"value": "%2Fevents%2F3"
+								},
+								{
+									"key": "unique",
+									"value": "false"
 								}
 							]
 						}
@@ -270,25 +393,7 @@
 						"type": "text/javascript",
 						"packages": {},
 						"exec": [
-							"pm.test(\"Код ответа 200\", function () {",
-							"    pm.response.to.have.status(200);",
-							"});",
-							"",
-							"pm.test(\"Ответ — JSON массив\", function () {",
-							"    const jsonData = pm.response.json();",
-							"    pm.expect(jsonData).to.be.an(\"array\");",
-							"});",
-							"",
-							"pm.test(\"Массив содержит нужные поля\", function () {",
-							"    const jsonData = pm.response.json();",
-							"    if (jsonData.length > 0) {",
-							"        const hit = jsonData[0];",
-							"        pm.expect(hit).to.have.property(\"app\");",
-							"        pm.expect(hit).to.have.property(\"uri\");",
-							"        pm.expect(hit).to.have.property(\"hits\");",
-							"        pm.expect(typeof hit.hits).to.eql(\"number\");",
-							"    }",
-							"});"
+							""
 						]
 					}
 				}

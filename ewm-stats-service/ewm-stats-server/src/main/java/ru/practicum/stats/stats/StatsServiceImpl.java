@@ -13,12 +13,19 @@ public class StatsServiceImpl implements StatsService {
 
     private final StatsRepository statsRepository;
 
+
     @Override
     public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, boolean unique) {
+        boolean noUriFilter = (uris == null || uris.isEmpty());
+
         if (unique) {
-            return statsRepository.getStatsUnique(start, end, uris);
+            return noUriFilter
+                    ? statsRepository.getStatsUniqueWithoutUriFilter(start, end)
+                    : statsRepository.getStatsUnique(start, end, uris);
         } else {
-            return statsRepository.getStats(start, end, uris);
+            return noUriFilter
+                    ? statsRepository.getStatsWithoutUriFilter(start, end)
+                    : statsRepository.getStats(start, end, uris);
         }
     }
 }

@@ -37,7 +37,8 @@ public class StatsClient {
 
         if (uris != null && !uris.isEmpty()) {
             for (String uri : uris) {
-                urlBuilder.append("&uris=").append(uri);
+                String encodedUri = URLEncoder.encode(uri, StandardCharsets.UTF_8);
+                urlBuilder.append("&uris=").append(encodedUri);
             }
         }
 
