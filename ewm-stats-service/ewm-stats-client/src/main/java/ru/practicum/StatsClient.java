@@ -1,11 +1,13 @@
 package ru.practicum;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
 
@@ -16,6 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class StatsClient {
 
@@ -25,28 +28,40 @@ public class StatsClient {
     private String serverUrl;
 
     public void saveHit(EndpointHitDto hitDto) {
-        HttpEntity<EndpointHitDto> request = new HttpEntity<>(hitDto);
-        restTemplate.postForEntity(serverUrl + "/hit", request, Void.class);
+        try {
+            HttpEntity<EndpointHitDto> request = new HttpEntity<>(hitDto);
+            restTemplate.postForEntity(serverUrl + "/hit", request, Void.class);
+        } catch (Exception e) {
+            System.out.println("⚠️ Ошибка при отправке hit: " + e.getMessage());
+        }
     }
 
     public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, boolean unique) {
-        String startStr = encode(start);
-        String endStr = encode(end);
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String startStr = start.format(formatter).replace(" ", "+");
+            String endStr = end.format(formatter).replace(" ", "+");
 
-        StringBuilder urlBuilder = new StringBuilder(serverUrl + "/stats?start=" + startStr + "&end=" + endStr);
+            UriComponentsBuilder builder = UriComponentsBuilder
+                    .fromHttpUrl(serverUrl + "/stats")
+                    .queryParam("start", startStr)
+                    .queryParam("end", endStr)
+                    .queryParam("unique", unique);
 
-        if (uris != null && !uris.isEmpty()) {
-            for (String uri : uris) {
-                String encodedUri = URLEncoder.encode(uri, StandardCharsets.UTF_8);
-                urlBuilder.append("&uris=").append(encodedUri);
+            if (uris != null && !uris.isEmpty()) {
+                for (String uri : uris) {
+                    builder.queryParam("uris", uri);
+                }
             }
+
+            String url = builder.build().toUriString();
+
+            ResponseEntity<ViewStatsDto[]> response = restTemplate.getForEntity(url, ViewStatsDto[].class);
+            return List.of(response.getBody());
+        } catch (Exception e) {
+            System.out.println("⚠️ Ошибка при получении статистики: " + e.getMessage());
+            return List.of();
         }
-
-        urlBuilder.append("&unique=").append(unique);
-
-        ResponseEntity<ViewStatsDto[]> response = restTemplate
-                .getForEntity(urlBuilder.toString(), ViewStatsDto[].class);
-        return List.of(response.getBody());
     }
 
     private String encode(LocalDateTime dateTime) {
