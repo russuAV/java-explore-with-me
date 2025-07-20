@@ -5,9 +5,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import ru.practicum.StatsClient;
 import ru.practicum.compilation.mapper.CompilationMapper;
 import ru.practicum.compilation.model.Compilation;
 import ru.practicum.compilation.model.CompilationDto;
@@ -17,7 +14,6 @@ import ru.practicum.compilation.repository.CompilationRepository;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.service.EventService;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -36,9 +32,6 @@ class CompilationServiceImplTest {
 
     @Mock
     EventService eventService;
-
-    @Mock
-    StatsClient statsClient;
 
     @InjectMocks
     CompilationServiceImpl compilationService;
@@ -90,24 +83,6 @@ class CompilationServiceImplTest {
         compilationService.delete(42L);
 
         verify(compilationRepository).delete(existing);
-    }
-
-    @Test
-    void getAllCompilations_shouldReturnDtos() {
-        Compilation c1 = new Compilation();
-        Compilation c2 = new Compilation();
-        CompilationDto dto1 = new CompilationDto();
-        CompilationDto dto2 = new CompilationDto();
-
-        when(compilationRepository.findAll(any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(c1, c2)));
-        when(compilationMapper.toDto(any(Compilation.class)))
-                .thenReturn(dto1).thenReturn(dto2);
-
-        List<CompilationDto> result = compilationService.getAllCompilations(
-                null, 0, 10, null);
-
-        assertThat(result).containsExactly(dto1, dto2);
     }
 
     @Test

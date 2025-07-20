@@ -1,11 +1,14 @@
 package ru.practicum.compilation.service;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.StatsClient;
 import ru.practicum.compilation.mapper.CompilationMapper;
 import ru.practicum.compilation.model.Compilation;
@@ -19,10 +22,7 @@ import ru.practicum.event.service.EventService;
 import ru.practicum.exception.NotFoundException;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -33,7 +33,7 @@ public class CompilationServiceImpl implements CompilationService {
     private final CompilationMapper compilationMapper;
     private final EventService eventService;
     private final StatsClient statsClient;
-
+    private final EntityManager entityManager;
 
     @Override
     public CompilationDto create(NewCompilationDto newCompilationDto) {
@@ -85,18 +85,33 @@ public class CompilationServiceImpl implements CompilationService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public List<CompilationDto> getAllCompilations(Boolean pinned, int from, int size, HttpServletRequest request) {
-        Pageable pageable = PageRequest.of(from / size, size);
-        List<Compilation> compilations;
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Compilation> query = cb.createQuery(Compilation.class);
+        Root<Compilation> root = query.from(Compilation.class);
 
         if (pinned != null) {
-            compilations = compilationRepository.findAllByPinned(pinned, pageable);
-        } else {
-            compilations = compilationRepository.findAll(pageable).getContent();
+            query.where(cb.equal(root.get("pinned"), pinned));
         }
 
+        query.orderBy(cb.desc(root.get("id")));
+
+        List<Compilation> compilations = entityManager.createQuery(query)
+                .setFirstResult(from)
+                .setMaxResults(size)
+                .getResultList();
+
+        Map<Long, Integer> viewsMap = getAllViewsForCompilations(compilations);
+
+        compilations.forEach(compilation -> {
+            compilation.getEvents().forEach(event -> {
+                event.setViews(viewsMap.getOrDefault(event.getId(), 0));
+            });
+        });
+
         return compilations.stream()
-                .map(this::enrichCompilationDtoWithViews)
+                .map(compilationMapper::toDto)
                 .toList();
     }
 
@@ -104,36 +119,44 @@ public class CompilationServiceImpl implements CompilationService {
     public CompilationDto getCompilationById(Long compId, HttpServletRequest request) {
         Compilation compilation = getEntityById(compId);
 
-        return enrichCompilationDtoWithViews(compilation);
+        Map<Long, Integer> viewsMap = getAllViewsForCompilations(List.of(compilation));
+
+        compilation.getEvents().forEach(event ->
+                event.setViews(viewsMap.getOrDefault(event.getId(), 0))
+        );
+
+        return compilationMapper.toDto(compilation);
     }
 
-    private CompilationDto enrichCompilationDtoWithViews(Compilation compilation) {
-        Set<Event> events = compilation.getEvents();
-
-        if (events == null || events.isEmpty()) {
-            return compilationMapper.toDto(compilation);
+    private Map<Long, Integer> getAllViewsForCompilations(List<Compilation> compilations) {
+        if (compilations == null || compilations.isEmpty()) {
+            return Collections.emptyMap();
         }
 
-        List<String> uris = events.stream()
-                .map(e -> "/events/" + e.getId())
+        List<Event> allEvents = compilations.stream()
+                .flatMap(compilation -> compilation.getEvents().stream())
                 .toList();
 
-        // Находим самую раннюю дату события, чтобы корректно задать диапазон
-        LocalDateTime start = events.stream()
-                .map(Event::getCreatedOn)
+        if (allEvents.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<String> uris = allEvents.stream()
+                .map(event -> "/events/" + event.getId())
+                .distinct()
+                .toList();
+
+        LocalDateTime start = allEvents.stream()
+                .map(Event::getPublishedOn)
+                .filter(Objects::nonNull)
                 .min(LocalDateTime::compareTo)
-                .orElse(LocalDateTime.now().minusYears(1));
+                .orElse(LocalDateTime.now().minusMonths(1));
 
         List<ViewStatsDto> stats = statsClient.getStats(start, LocalDateTime.now(), uris, false);
 
-        Map<Long, Integer> viewsMap = stats.stream()
-                .collect(Collectors.toMap(
-                        s -> Long.parseLong(s.getUri().replace("/events/", "")),
-                        s -> s.getHits().intValue()
-                ));
-
-        events.forEach(e -> e.setViews(viewsMap.getOrDefault(e.getId(), 0)));
-
-        return compilationMapper.toDto(compilation);
+        return stats.stream().collect(Collectors.toMap(
+                s -> Long.parseLong(s.getUri().replace("/events/", "")),
+                s -> s.getHits().intValue()
+        ));
     }
 }
