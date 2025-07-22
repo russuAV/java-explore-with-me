@@ -24,6 +24,10 @@ public interface EventService {
 
     void incrementConfirmedRequests(Long eventId, int count);
 
+    void decrementCommentsCount(Long eventId);
+
+    void incrementCommentsCount(Long eventId);
+
     Set<Event> findAllById(Set<Long> ids);
 
     List<EventFullDto> getEventsByParams(AdminEventSearchRequest params);
@@ -31,5 +35,4 @@ public interface EventService {
     List<EventShortDto> getPublicEvents(PublicEventSearchRequest request, HttpServletRequest httpRequest);
 
     EventFullDto getPublishedEventById(Long eventId, HttpServletRequest httpRequest);
-
 }
