@@ -2,10 +2,12 @@ package ru.practicum.stats.stats;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import ru.practicum.dto.ViewStatsDto;
 
 import java.time.LocalDateTime;
@@ -30,6 +32,11 @@ public class StatsController {
 
             @RequestParam(value = "unique", defaultValue = "false") boolean unique
     ) {
+        if (start.isAfter(end)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Дата начала не может быть позже даты окончания");
+        }
+
         return statsService.getStats(start, end, uris, unique);
     }
 }
