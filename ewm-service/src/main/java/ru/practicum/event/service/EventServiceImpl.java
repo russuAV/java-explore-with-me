@@ -3,10 +3,6 @@ package ru.practicum.event.service;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.StatsClient;
@@ -151,9 +147,7 @@ public class EventServiceImpl implements EventService {
     @Override
     public List<EventShortDto> getUserEvents(Long userId, int from, int size) {
         userService.getEntityById(userId);
-
-        Pageable pageable = PageRequest.of(from / size, size, Sort.by("id").descending());
-        List<Event> events = eventRepository.findAllByInitiatorId(userId, pageable).getContent();
+        List<Event> events = eventRepository.findUserEventsWithOffset(userId, from, size);
 
         return events.stream()
                 .map(eventMapper::toEventShortDto)
@@ -198,6 +192,25 @@ public class EventServiceImpl implements EventService {
         log.info("Количество подтвержденных заявок стало больше. Теперь {}", event.getConfirmedRequests());
     }
 
+    @Transactional
+    public void decrementCommentsCount(Long eventId) {
+        Event event = getEntityById(eventId);
+        if (event.getCommentsCount() > 0) {
+            event.setCommentsCount(event.getCommentsCount() - 1);
+            eventRepository.save(event);
+            log.info("Количество комментариев стало меньше. Теперь {}", event.getCommentsCount());
+        }
+    }
+
+    @Transactional
+    public void incrementCommentsCount(Long eventId) {
+        Event event = getEntityById(eventId);
+        event.setCommentsCount(event.getCommentsCount() + 1);
+        eventRepository.save(event);
+        log.info("Количество комментариев стало больше. Теперь {}", event.getCommentsCount());
+    }
+
+
     @Override
    public Set<Event> findAllById(Set<Long> ids) {
         return eventRepository.findByIdIn(ids);
@@ -205,38 +218,9 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventFullDto> getEventsByParams(AdminEventSearchRequest request) {
-        Pageable pageable = PageRequest.of(request.getFrom() / request.getSize(), request.getSize());
+        List<Event> events = eventRepository.findByAdminFilter(request);
 
-        List<EventState> states = null;
-        if (request.getStates() != null) {
-            states = request.getStates().stream()
-                    .map(s -> {
-                        try {
-                            return EventState.valueOf(s);
-                        } catch (IllegalArgumentException e) {
-                            throw new BadRequestException("Некорректное значение состояния: " + s);
-                        }
-                    }).toList();
-        }
-
-        LocalDateTime start = request.getRangeStart() != null
-                ? request.getRangeStart()
-                : LocalDateTime.now();
-
-        LocalDateTime end = request.getRangeEnd() != null
-                ? request.getRangeEnd()
-                : LocalDateTime.now().plusYears(1);
-
-        Page<Event> page = eventRepository.findByAdminParams(
-                request.getUsers(),
-                states,
-                request.getCategories(),
-                start,
-                end,
-                pageable
-        );
-
-        return page.stream()
+        return events.stream()
                 .map(eventMapper::toEventFullDto)
                 .toList();
     }
@@ -245,35 +229,12 @@ public class EventServiceImpl implements EventService {
     public List<EventShortDto> getPublicEvents(PublicEventSearchRequest request, HttpServletRequest httpRequest) {
         sendStatistics(httpRequest);
 
-        Pageable pageable = PageRequest.of(
-                request.getFrom() / request.getSize(),
-                request.getSize(),
-                Sort.by(request.getSort().equals("VIEWS") ? "views" : "eventDate")
-        );
+        List<Event> events = eventRepository.findPublicEventsByFilter(request);
 
-        LocalDateTime start = request.getRangeStart() != null
-                ? request.getRangeStart()
-                : LocalDateTime.now();
-
-        LocalDateTime end = request.getRangeEnd() != null
-                ? request.getRangeEnd()
-                : LocalDateTime.now().plusYears(1);
-
-        Page<Event> page = eventRepository.findPublicEvents(
-                request.getText(),
-                request.getCategories(),
-                request.getPaid(),
-                start,
-                end,
-                request.getOnlyAvailable() != null ? request.getOnlyAvailable() : false,
-                pageable
-        );
-
-        return page.stream()
+        return events.stream()
                 .map(eventMapper::toEventShortDto)
                 .toList();
     }
-
 
     @Override
     public EventFullDto getPublishedEventById(Long eventId, HttpServletRequest httpRequest) {

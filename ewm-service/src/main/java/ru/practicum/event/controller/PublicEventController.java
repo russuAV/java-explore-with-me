@@ -20,8 +20,9 @@ public class PublicEventController {
     private final StatsClient statsClient;
 
     @GetMapping
-    public List<EventShortDto> getPublicEvents(@Valid @ModelAttribute PublicEventSearchRequest request,
-                                               HttpServletRequest httpRequest) {
+    public List<EventShortDto> getPublicEvents(
+            @Valid @ModelAttribute PublicEventSearchRequest request,
+            HttpServletRequest httpRequest) {
         return eventService.getPublicEvents(request, httpRequest);
     }
 

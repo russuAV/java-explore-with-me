@@ -15,7 +15,8 @@ import java.util.Optional;
 import java.util.Set;
 
 
-public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
+public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event>,
+        EventRepositoryCustom {
     Page<Event> findAllByInitiatorId(Long userId, Pageable pageable);
 
     boolean existsByCategoryId(Long categoryId);
@@ -63,4 +64,10 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     Optional<Event> findByIdAndState(Long id, EventState state);
 
     Set<Event> findByIdIn(Set<Long> ids);
+
+    @Query("SELECT e FROM Event e WHERE e.initiator.id = :userId ORDER BY e.id DESC LIMIT :size OFFSET :from")
+    List<Event> findUserEventsWithOffset(@Param("userId") Long userId,
+                                         @Param("from") int from,
+                                         @Param("size") int size);
+
 }

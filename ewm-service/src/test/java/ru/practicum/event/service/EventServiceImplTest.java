@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.PageImpl;
 import ru.practicum.StatsClient;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.service.CategoryService;
@@ -29,7 +28,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -196,15 +196,18 @@ class EventServiceImplTest {
         Long userId = 1L;
         Event event = new Event();
         EventShortDto dto = new EventShortDto();
+        int from = 0;
+        int size = 10;
 
         when(userService.getEntityById(userId)).thenReturn(new User());
-        when(eventRepository.findAllByInitiatorId(eq(userId), any())).thenReturn(new PageImpl<>(List.of(event)));
+        when(eventRepository.findUserEventsWithOffset(userId, from, size)).thenReturn(List.of(event));
         when(eventMapper.toEventShortDto(event)).thenReturn(dto);
 
-        List<EventShortDto> result = eventService.getUserEvents(userId, 0, 10);
+        List<EventShortDto> result = eventService.getUserEvents(userId, from, size);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0)).isEqualTo(dto);
+        verify(eventRepository).findUserEventsWithOffset(userId, from, size);
     }
 
     @Test
@@ -255,8 +258,8 @@ class EventServiceImplTest {
         Event e = new Event();
         EventFullDto dto = new EventFullDto();
 
-        when(eventRepository.findByAdminParams(any(), any(), any(), any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of(e)));
+        when(eventRepository.findByAdminFilter(any()))
+                .thenReturn(List.of(e));
         when(eventMapper.toEventFullDto(e)).thenReturn(dto);
 
         List<EventFullDto> result = eventService.getEventsByParams(request);
@@ -275,8 +278,10 @@ class EventServiceImplTest {
         Event e = new Event();
         EventShortDto dto = new EventShortDto();
 
-        when(eventRepository.findPublicEvents(any(), any(), any(), any(), any(), anyBoolean(), any()))
-                .thenReturn(new PageImpl<>(List.of(e)));
+//        when(eventRepository.findPublicEvents(any(), any(), any(), any(), any(), anyBoolean(), any()))
+//                .thenReturn(new PageImpl<>(List.of(e)));
+        when(eventRepository.findPublicEventsByFilter(any())).thenReturn(List.of(e));
+
         when(eventMapper.toEventShortDto(e)).thenReturn(dto);
 
         List<EventShortDto> result = eventService.getPublicEvents(r, request);

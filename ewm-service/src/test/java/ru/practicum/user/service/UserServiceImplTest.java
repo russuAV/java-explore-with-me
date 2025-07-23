@@ -5,8 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.user.mapper.UserMapper;
@@ -90,14 +88,16 @@ class UserServiceImplTest {
     void getUsers_shouldReturnAllUsers_whenIdsNull() {
         User user = new User(1L, "mail@example.com", "User");
         UserDto dto = new UserDto("mail@example.com", 1L, "User");
+        int from = 0;
+        int size = 10;
 
-        when(userRepository.findAll(any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(user)));
-
+        when(userRepository.findUsersWithOffset(null, from, size)).thenReturn(List.of(user));
         when(userMapper.toUserDto(user)).thenReturn(dto);
 
-        List<UserDto> result = userService.getUsers(null, 0, 10);
+        List<UserDto> result = userService.getUsers(null, from, size);
+
         assertThat(result).containsExactly(dto);
+        verify(userRepository).findUsersWithOffset(null, from, size);
     }
 
     @Test
@@ -105,12 +105,16 @@ class UserServiceImplTest {
         List<Long> ids = List.of(1L, 2L);
         User user1 = new User(1L, "a@a.com", "A");
         UserDto dto1 = new UserDto("a@a.com", 1L, "A");
+        int from = 0;
+        int size = 10;
 
-        when(userRepository.findByIdIn(eq(ids), any())).thenReturn(List.of(user1));
+        when(userRepository.findUsersWithOffset(ids, from, size)).thenReturn(List.of(user1));
         when(userMapper.toUserDto(user1)).thenReturn(dto1);
 
-        List<UserDto> result = userService.getUsers(ids, 0, 10);
+        List<UserDto> result = userService.getUsers(ids, from, size);
+
         assertThat(result).containsExactly(dto1);
+        verify(userRepository).findUsersWithOffset(ids, from, size);
     }
 
     @Test

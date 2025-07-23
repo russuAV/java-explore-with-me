@@ -5,9 +5,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import ru.practicum.category.mapper.CategoryMapper;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.model.CategoryDto;
@@ -161,21 +158,25 @@ class CategoryServiceImplTest {
 
     @Test
     void getCategories_shouldReturnPaginatedResults() {
-        Pageable pageable = PageRequest.of(0, 10);
+        int from = 0;
+        int size = 10;
         List<Category> categories = List.of(category);
-        when(categoryRepository.findAll(pageable)).thenReturn(new PageImpl<>(categories));
+
+        when(categoryRepository.findWithOffset(from, size)).thenReturn(categories);
         when(categoryMapper.toCategoryDto(category)).thenReturn(categoryDto);
 
-        List<CategoryDto> result = categoryService.getCategories(0, 10);
+        List<CategoryDto> result = categoryService.getCategories(from, size);
 
         assertEquals(1, result.size());
         assertEquals(categoryDto, result.get(0));
+
+        verify(categoryRepository).findWithOffset(from, size);
+        verify(categoryMapper).toCategoryDto(category);
     }
 
     @Test
     void getCategories_whenEmptyResult_shouldReturnEmptyList() {
-        Pageable pageable = PageRequest.of(0, 10);
-        when(categoryRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of()));
+        when(categoryRepository.findWithOffset(0, 10)).thenReturn(List.of());
 
         List<CategoryDto> result = categoryService.getCategories(0, 10);
 
@@ -183,12 +184,13 @@ class CategoryServiceImplTest {
     }
 
     @Test
-    void getCategories_whenPageCalculated_shouldUseCorrectPage() {
-        Pageable expectedPageable = PageRequest.of(2, 5); // from=10, size=5 → page=2
-        when(categoryRepository.findAll(expectedPageable)).thenReturn(new PageImpl<>(List.of()));
+    void getCategories_whenCalled_shouldUseCorrectOffsetAndLimit() {
+        int from = 10;
+        int size = 5;
 
-        categoryService.getCategories(10, 5);
+        when(categoryRepository.findWithOffset(from, size)).thenReturn(List.of());
+        categoryService.getCategories(from, size);
 
-        verify(categoryRepository).findAll(expectedPageable);
+        verify(categoryRepository).findWithOffset(from, size);
     }
 }

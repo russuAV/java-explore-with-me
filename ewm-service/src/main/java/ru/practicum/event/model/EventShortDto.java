@@ -2,6 +2,7 @@ package ru.practicum.event.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.practicum.category.model.CategoryDto;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class EventShortDto {
     private String annotation;
     private CategoryDto category;
@@ -27,4 +29,5 @@ public class EventShortDto {
     private Boolean requestModeration;
     private String title;
     private int views;
+    private int commentsCount;
 }
