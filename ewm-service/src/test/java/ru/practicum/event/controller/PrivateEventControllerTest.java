@@ -98,7 +98,7 @@ class PrivateEventControllerTest {
         EventShortDto event = new EventShortDto("Annotation", new CategoryDto(), 0,
                 LocalDateTime.now().plusDays(1), 5L, new UserShortDto(1L, null),
                 null, null,
-                "Concert", 0);
+                "Concert", 0, 0);
         Mockito.when(eventService.getUserEvents(1L, 0, 10)).thenReturn(List.of(event));
 
         mockMvc.perform(get("/users/1/events"))

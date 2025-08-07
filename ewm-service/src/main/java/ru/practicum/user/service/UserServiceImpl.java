@@ -2,16 +2,14 @@ package ru.practicum.user.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.user.mapper.UserMapper;
-import ru.practicum.user.repository.UserRepository;
 import ru.practicum.user.model.NewUserRequest;
 import ru.practicum.user.model.User;
 import ru.practicum.user.model.UserDto;
+import ru.practicum.user.repository.UserRepository;
 
 import java.util.List;
 
@@ -44,14 +42,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDto> getUsers(List<Long> ids, int from, int size) {
-        Pageable pageable = PageRequest.of(from / size, size);
+        if (from < 0) throw new IllegalArgumentException("From parameter cannot be negative");
+        if (size <= 0) throw new IllegalArgumentException("Size parameter must be positive");
 
-        List<User> users;
-        if (ids == null || ids.isEmpty()) {
-            users = userRepository.findAll(pageable).getContent();
-        } else {
-            users = userRepository.findByIdIn(ids, pageable);
-        }
+        List<User> users = userRepository.findUsersWithOffset(ids, from, size);
 
         return users.stream()
                 .map(userMapper::toUserDto)

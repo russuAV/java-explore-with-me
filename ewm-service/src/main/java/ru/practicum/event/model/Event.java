@@ -78,4 +78,7 @@ public class Event {
 
     @Transient
     private int views;
+
+    @Column(name = "comments_count", nullable = false)
+    private int commentsCount = 0;
 }

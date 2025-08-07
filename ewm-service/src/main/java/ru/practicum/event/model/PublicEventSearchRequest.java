@@ -1,6 +1,7 @@
 package ru.practicum.event.model;
 
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
@@ -24,6 +25,8 @@ public class PublicEventSearchRequest {
     private LocalDateTime rangeEnd;
 
     private Boolean onlyAvailable = false;
+
+    @Pattern(regexp = "EVENT_DATE|VIEWS|COMMENTS", message = "Неверный тип сортировки")
     private String sort = "EVENT_DATE";
 
     @PositiveOrZero

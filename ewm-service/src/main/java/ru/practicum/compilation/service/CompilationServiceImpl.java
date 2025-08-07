@@ -1,9 +1,6 @@
 package ru.practicum.compilation.service;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -87,21 +84,7 @@ public class CompilationServiceImpl implements CompilationService {
     @Override
     @Transactional(readOnly = true)
     public List<CompilationDto> getAllCompilations(Boolean pinned, int from, int size, HttpServletRequest request) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Compilation> query = cb.createQuery(Compilation.class);
-        Root<Compilation> root = query.from(Compilation.class);
-
-        if (pinned != null) {
-            query.where(cb.equal(root.get("pinned"), pinned));
-        }
-
-        query.orderBy(cb.desc(root.get("id")));
-
-        List<Compilation> compilations = entityManager.createQuery(query)
-                .setFirstResult(from)
-                .setMaxResults(size)
-                .getResultList();
-
+        List<Compilation> compilations = compilationRepository.findCompilations(pinned, from, size);
         Map<Long, Integer> viewsMap = getAllViewsForCompilations(compilations);
 
         compilations.forEach(compilation -> {
@@ -118,7 +101,6 @@ public class CompilationServiceImpl implements CompilationService {
     @Override
     public CompilationDto getCompilationById(Long compId, HttpServletRequest request) {
         Compilation compilation = getEntityById(compId);
-
         Map<Long, Integer> viewsMap = getAllViewsForCompilations(List.of(compilation));
 
         compilation.getEvents().forEach(event ->

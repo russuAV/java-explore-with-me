@@ -2,10 +2,7 @@ package ru.practicum.category.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
@@ -13,6 +10,7 @@ import lombok.Setter;
 @Table(name = "categories")
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class Category {
 
     @Id
